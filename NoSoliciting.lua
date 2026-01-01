@@ -52,20 +52,44 @@ local hookChatFrame = function(frame)
   if (original) then
     frame.AddMessage = function(t, message, r, g, b, id)
       if (NoSoliciting_Enabled) then
-        -- Try to extract channel from message
-        local found, _, channel = string.find(message, "^%[%d+. ([^%]]+)%]")
+        local channel = nil
+        local found = false
         
-        -- Alternative pattern for some chat formats
+        -- Try multiple patterns to extract channel
+        
+        -- Pattern 1: Channel messages like "[1. Trade]"
+        found, _, channel = string.find(message, "^%[%d+%. ([^%]]+)%]")
+        
+        -- Pattern 2: Simple channel messages like "[Trade]"
         if not found then
             found, _, channel = string.find(message, "^%[([^%]]+)%]")
         end
         
-        -- Handle Say and Yell which may have different formats
+        -- Pattern 3: Player name prefix for say/yell (e.g., "Player says:")
         if not found then
-            -- Try to match "CHAT_MSG_SAY" or "CHAT_MSG_YELL" type messages
-            if string.find(message, "^%[%d+:%d+%]") then
-                -- This might be a timestamped message, try different pattern
-                found, _, channel = string.find(message, "^%[%d+:%d+%]%[([^%]]+)%]")
+            -- Check for " says: " or " yells: " pattern
+            if string.find(message, " says: ") then
+                channel = "Say"
+                found = true
+            elseif string.find(message, " yells: ") then
+                channel = "Yell"
+                found = true
+            end
+        end
+        
+        -- Pattern 4: Try to find any ":" as delimiter
+        if not found then
+            local colonPos = string.find(message, ": ")
+            if colonPos then
+                -- Check if it looks like a player name followed by action
+                local prefix = string.sub(message, 1, colonPos - 1)
+                if string.find(prefix, " says$") then
+                    channel = "Say"
+                    found = true
+                elseif string.find(prefix, " yells$") then
+                    channel = "Yell"
+                    found = true
+                end
             end
         end
         
@@ -138,6 +162,9 @@ local initialize = function()
     
     log(string.format("NoSoliciting loaded (%s)", (NoSoliciting_Enabled and "enabled") or "disabled"))
     log("Hiding messages containing keywords in all channels (World, Trade, Say, Yell, etc.)")
+    
+    -- Test message to show it's working
+    log("Test: Add keyword 'test' with /ns add test to filter messages containing 'test'")
 end
 
 -- Event handler.
@@ -222,6 +249,13 @@ local commands = {
     ["refresh"] = function()
         updateJoinedChannels()
         log("Channel list refreshed")
+    end,
+    
+    ["test"] = function()
+        log("Testing channel detection patterns...")
+        log("Add a test keyword: /ns add testfilter")
+        log("Then try saying/yelling 'testfilter' to see if it's filtered")
+        log("Also try in trade/world: [Trade] testfilter")
     end
 }
 
@@ -236,6 +270,7 @@ local commandMeta = {
             log("  /ns list              - lists all keywords currently active.")
             log("  /ns channels          - shows which channels are being filtered")
             log("  /ns refresh           - refresh the list of joined channels")
+            log("  /ns test              - run a test to verify filtering works")
             log("  /ns on/off            - temporarily enables/disables filtering")
             log("Filtered channels: World, Trade, Say, Yell, and all joined channels")
             log("Note: Keywords are case-insensitive!")
