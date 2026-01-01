@@ -1,6 +1,6 @@
-# NoSoliciting - Vanilla WoW Chat Filter
+# NoSoliciting - Turtle WoW Chat Filter
 
-A lightweight addon for World of Warcraft 1.12 (Vanilla/Classic) that filters unwanted messages from chat channels by hiding messages containing specific keywords.
+A lightweight addon for Turtle WoW that filters unwanted messages from chat channels by hiding messages containing specific keywords.
 
 ## Features
 
