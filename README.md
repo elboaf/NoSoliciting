@@ -51,3 +51,4 @@ A lightweight addon for Turtle WoW that filters unwanted messages from chat chan
 
 ### Effective Keyword Suggestions
 To filter common spam:
+summon, lfg, lfw, " hr", recruiting
