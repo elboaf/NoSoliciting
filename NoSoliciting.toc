@@ -1,0 +1,7 @@
+## Interface: 11200
+## Title: NoSoliciting
+## Notes: Hides messages containing keywords in all channels (World, Trade, Say, Yell, etc.)
+## Author: Two
+## Version: 1.12.1.3
+## SavedVariablesPerCharacter: NoSoliciting_KeyWords, NoSoliciting_Enabled
+NoSoliciting.xml
