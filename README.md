@@ -37,10 +37,8 @@ A lightweight addon for Turtle WoW that filters unwanted messages from chat chan
 - `/ns test` - Run a test to verify filtering works
 
 ### Keyword Examples
-- `/ns add gold` - Filter messages containing "gold"
-- `/ns add [hr]` - Filter messages containing "[HR]" (hard reserve)
-- `/ns add "wts gold"` - Filter the phrase "wts gold" (with quotes for spaces)
-- `/ns add " hr "` - Filter "hr" as a standalone word (with spaces)
+- `/ns add lfw` - Filter trade skill spam eg: "ENCHANTER LFW BLAH BLAH"
+- `/ns add " hr"` - Filter " hr" as a standalone word (with spaces) eg: "LFM BRD HOJ HR NEED HEALS"
 
 ### Filtered Channels
 - World Channel
