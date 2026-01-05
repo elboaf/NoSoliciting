@@ -176,22 +176,63 @@ function NoSoliciting_OnEvent()
     end
 end
 
+-- Helper function to check if SuperWoW functions are available
+local function hasSuperWoW()
+    return ExportFile ~= nil and ImportFile ~= nil
+end
+
 local commands = {
     ["add"] = function(args)
-        local found, _, keyword = string.find(args or "", "^%s*(%S+)")
-        if (found) then
+        local keyword = ""
+        local input = args or ""
+        
+        -- Trim leading and trailing spaces
+        input = string.gsub(input, "^%s*(.-)%s*$", "%1")
+        
+        -- Check if the argument starts and ends with quotes
+        if string.find(input, "^\"") and string.find(input, "\"$") then
+            -- Quoted keyword - extract everything between quotes
+            keyword = string.sub(input, 2, string.len(input) - 1)
+        else
+            -- Unquoted keyword - take the first word
+            local found, _, unquoted = string.find(input, "^%s*(%S+)")
+            if found then
+                keyword = unquoted
+            end
+        end
+        
+        if keyword ~= "" then
             -- Store keywords in lowercase for case-insensitive matching
             keyword = string.lower(keyword)
             NoSoliciting_KeyWords[keyword] = true
             log(string.format("Added '%s' to filter list." , keyword))
         else
             log("/ns add <keyword> - add a keyword to filter list.")
+            log("Use quotes for keywords with spaces: /ns add \" hr \"")
+            log("Example: /ns add \"wts gold\"")
         end
     end,
     
     ["del"] = function(args)
-        local found, _, keyword = string.find(args or "", "^%s*(%S+)")
-        if (found) then
+        local keyword = ""
+        local input = args or ""
+        
+        -- Trim leading and trailing spaces
+        input = string.gsub(input, "^%s*(.-)%s*$", "%1")
+        
+        -- Check if the argument starts and ends with quotes
+        if string.find(input, "^\"") and string.find(input, "\"$") then
+            -- Quoted keyword - extract everything between quotes
+            keyword = string.sub(input, 2, string.len(input) - 1)
+        else
+            -- Unquoted keyword - take the first word
+            local found, _, unquoted = string.find(input, "^%s*(%S+)")
+            if found then
+                keyword = unquoted
+            end
+        end
+        
+        if keyword ~= "" then
             keyword = string.lower(keyword)
             if (NoSoliciting_KeyWords[keyword]) then
                 NoSoliciting_KeyWords[keyword] = nil
@@ -201,6 +242,7 @@ local commands = {
             end
         else
             log("/ns del <keyword> - removes a keyword from filter list.")
+            log("Use quotes for keywords with spaces: /ns del \" hr \"")
         end
     end,
     
@@ -256,6 +298,116 @@ local commands = {
         log("Add a test keyword: /ns add testfilter")
         log("Then try saying/yelling 'testfilter' to see if it's filtered")
         log("Also try in trade/world: [Trade] testfilter")
+    end,
+    
+    -- NEW: Export command
+    ["export"] = function(args)
+        if not hasSuperWoW() then
+            log("Error: SuperWoW functions not available. Cannot export.")
+            log("Make sure you're using SuperWoW.dll mod")
+            return
+        end
+        
+        local filename = args or "nosoliciting_export.txt"
+        
+        -- Trim filename
+        filename = string.gsub(filename, "^%s*(.-)%s*$", "%1")
+        
+        -- Convert keywords to string
+        local exportData = ""
+        local count = 0
+        for keyword,_ in pairs(NoSoliciting_KeyWords) do
+            exportData = exportData .. keyword .. "\n"
+            count = count + 1
+        end
+        
+        if count == 0 then
+            log("No keywords to export. Add some keywords first with /ns add <keyword>")
+            return
+        end
+        
+        -- Add header
+        exportData = "# NoSoliciting Keyword Export - " .. date("%Y-%m-%d %H:%M:%S") .. "\n" .. exportData
+        
+        local success = ExportFile(filename, exportData)
+        if success then
+            log(string.format("Exported %d keywords to: %s", count, filename))
+            log("File saved to: WoW\\imports\\" .. filename)
+        else
+            log("Error: Failed to export keywords")
+        end
+    end,
+    
+    -- NEW: Import command
+    ["import"] = function(args)
+        if not hasSuperWoW() then
+            log("Error: SuperWoW functions not available. Cannot import.")
+            log("Make sure you're using SuperWoW.dll mod")
+            return
+        end
+        
+        local filename = args or "nosoliciting_export.txt"
+        
+        -- Trim filename
+        filename = string.gsub(filename, "^%s*(.-)%s*$", "%1")
+        
+        local importData = ImportFile(filename)
+        
+        if not importData or importData == "" then
+            log(string.format("Error: Could not read file '%s' or file is empty", filename))
+            log("Make sure the file exists in: WoW\\imports\\" .. filename)
+            return
+        end
+        
+        -- Parse import data
+        local importedCount = 0
+        local skippedCount = 0
+        local lines = {}
+        
+        -- Split by lines (Lua 5.0 compatible)
+        for line in string.gfind(importData, "[^\n]+") do
+            -- Skip empty lines and comments
+            if line ~= "" and not string.find(line, "^#") then
+                local keyword = string.lower(line)
+                keyword = string.gsub(keyword, "^%s*(.-)%s*$", "%1") -- Trim spaces
+                
+                if keyword ~= "" then
+                    if not NoSoliciting_KeyWords[keyword] then
+                        NoSoliciting_KeyWords[keyword] = true
+                        importedCount = importedCount + 1
+                    else
+                        skippedCount = skippedCount + 1
+                    end
+                end
+            end
+        end
+        
+        if importedCount > 0 then
+            log(string.format("Imported %d new keywords from: %s", importedCount, filename))
+            if skippedCount > 0 then
+                log(string.format("Skipped %d duplicates", skippedCount))
+            end
+            log("Use /ns list to see all keywords")
+        else
+            log("No new keywords imported. All keywords in file already exist or file is empty.")
+        end
+    end,
+    
+    -- NEW: Clear command to remove all keywords
+    ["clear"] = function()
+        -- Clear the table manually
+        for k in pairs(NoSoliciting_KeyWords) do
+            NoSoliciting_KeyWords[k] = nil
+        end
+        log("Cleared all keywords from filter list")
+    end,
+    
+    -- NEW: Reset command to restore default settings
+    ["reset"] = function()
+        NoSoliciting_KeyWords = {}
+        NoSoliciting_Enabled = true
+        log("Reset NoSoliciting to default settings")
+        log("Keywords cleared, filter enabled")
     end
 }
 
@@ -272,8 +424,20 @@ local commandMeta = {
             log("  /ns refresh           - refresh the list of joined channels")
             log("  /ns test              - run a test to verify filtering works")
             log("  /ns on/off            - temporarily enables/disables filtering")
+            log("  /ns clear             - clear all keywords from filter list")
+            log("  /ns reset             - reset to default settings (clear & enable)")
+            log("  /ns export [filename] - export keywords to file (requires SuperWoW)")
+            log("  /ns import [filename] - import keywords from file (requires SuperWoW)")
+            log("")
+            log("Use quotes for keywords with spaces: /ns add \" hr \"")
             log("Filtered channels: World, Trade, Say, Yell, and all joined channels")
             log("Note: Keywords are case-insensitive!")
+            log("")
+            log("Export/Import notes:")
+            log("  - Files are saved to/loaded from: WoW\\imports\\")
+            log("  - Default filename: nosoliciting_export.txt")
+            log("  - One keyword per line in the file")
+            log("  - Lines starting with # are treated as comments")
         end
     end
 }
